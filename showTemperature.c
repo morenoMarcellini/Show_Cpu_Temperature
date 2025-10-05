@@ -24,6 +24,7 @@
 #include "get_host_name.h"
 #include "XPixmap.h"
 #include "sync_XAlarm.h"
+#include "utilities.h"
 
 int main(int argc, char **argv)
 {
@@ -125,24 +126,14 @@ int main(int argc, char **argv)
 	w_mask |= CWBackingStore;
 	w_mask |= CWBitGravity;
 	w_mask |= CWWinGravity;
-#if 0
-    // Create a window
-    window = XCreateSimpleWindow(dpy,   // Display
-	RootWindow(dpy, 0),             // Parent window
-	watt.pos_x, watt.pos_y,         // X and Y coordinates
-	watt.size_x, watt.size_y,       // Width and height
-	1,                              // Border width
-	BlackPixel(dpy, defaultScreen), // Border color
-	WhitePixel(dpy, defaultScreen)  // Background color
-	);
-#else
+
 	window = XCreateWindow(dpy, parent, 
 	watt.pos_x, watt.pos_y, watt.size_x, watt.size_y, watt.border_size, 
 	DefaultDepth(dpy, defaultScreen),
 	InputOutput,
 	DefaultVisual(dpy, defaultScreen), 
 	w_mask, &wset);
-#endif
+
     if (!window)
     {
 	fprintf(stderr, "Failed to create simple window\n");
@@ -181,6 +172,9 @@ int main(int argc, char **argv)
     XSetForeground(dpy, gc, BlackPixel(dpy, defaultScreen));
 
     /* set the window name, app name, and class */
+#if 1
+	set_window_name(dpy, window);
+#else    
     char *appname = "Cpu(s) Temperature(s)";
     XClassHint *classHint;
 
@@ -196,7 +190,7 @@ int main(int argc, char **argv)
     }
     XSetClassHint(dpy, window, classHint);
     XFree(classHint);
-
+#endif
     /* Example for Colours */
     Colormap cmap = DefaultColormap(dpy, 0);
 
@@ -283,18 +277,6 @@ int main(int argc, char **argv)
 	    break;
     }
     
-#if 0
-   /* define few parameter for the simple arc*/
-    struct ArcAttr arcatt;
-    arcatt.rad_x = 128;
-    arcatt.rad_y = 128;
-    arcatt.three = 64 * 90;
-    arcatt.length = 64 * 360;
-
-    XDrawArc(dpy, window, gc, (watt.size_x - arcatt.rad_x) >> 1, 
-    (watt.size_y - arcatt.rad_y) >> 1, arcatt.rad_x,
-	arcatt.rad_y, arcatt.three, arcatt.length);
-#else
 	/* Simpler way */
 	XArc circle;
     circle.width = circle.height = 128;
@@ -304,7 +286,7 @@ int main(int argc, char **argv)
     circle.y = (watt.size_y - circle.height) >> 1;
 
 	XDrawArcs(dpy, window, gc, &circle, 1);
-#endif
+
     // Flush the drawing commands
     XFlush(dpy);
 
@@ -348,19 +330,13 @@ int main(int argc, char **argv)
     
     /* Add rectangle to draw the relative variation of temperature */
     /* change to subwindow */
-#if 0
-    int sub_x = 32;
-    int sub_y = (watt.size_y - 48);
-    unsigned int sub_width = watt.size_x - 64;
-    unsigned int sub_height = 16;
-    XDrawRectangle(dpy, window, gc, sub_x, sub_y, sub_width, sub_height);
-#else
+
 	/* we recycle the original XSetWindowAttributes */
-	struct WindowTopology sub_w;
+	WindowTopology sub_w;
 	sub_w.pos_x = 32;
 	sub_w.pos_y = (watt.size_y - 48);
 	sub_w.size_x = watt.size_x - 64;
-	sub_w.size_y = 32;
+	sub_w.size_y = 33;
 	sub_w.border_size = 1;
 	wset.background_pixel = BlackPixel(dpy, defaultScreen);
 	
@@ -373,92 +349,21 @@ int main(int argc, char **argv)
 	if (win != 0) XMapWindow(dpy, win);
 		else 
 		return -1;
-#endif
+		
     /* we change the gc.foreground */
     XGCValues xgc;
     xgc.foreground = cms_exact.pixel;
     XChangeGC(dpy, gc, GCForeground, &xgc);
-#if 0
-	struct ArcAttr arcatt;
-    arcatt.rad_x = 128;
-    arcatt.rad_y = 128;
-    arcatt.three = 64 * 90;
-    arcatt.length = 64 * 360;
-    XFillArc(dpy, window, gc, (watt.size_x - arcatt.rad_x) >> 1, 
-		(watt.size_y >> 1) - (arcatt.rad_y >> 1), arcatt.rad_x,
-		arcatt.rad_y, arcatt.three, arcatt.length);
-#else
 	XFillArcs(dpy, window, gc, &circle, 1);
-#endif
+
     /* back to black pencil */
     xgc.foreground = BlackPixel(dpy, defaultScreen);
     XChangeGC(dpy, gc, GCForeground, &xgc);
     XDrawString(dpy, window, gc, x, y, text_string, strlen(text_string));
-#if 0    
-    /* XSync */
-/*
-https://nrk.neocities.org/articles/x11-timeout-with-xsyncalarm
-*/
-    int sync_event, sync_error, major, minor;
-    if (!XSyncQueryExtension(dpy, &sync_event, &sync_error))
-    {
-	fprintf(stderr, "XSync extension not available");
-	return 1;
-    }
-    if (!XSyncInitialize(dpy, &major, &minor))
-    {
-	fprintf(stderr, "failed to initialize XSync extension");
-	return 1;
-    }
-    printf("XSync major %d minor %d\n", major, minor);
-
-    int ncounter;
-    XSyncSystemCounter *counters;
-    XSyncCounter servertime = None;
-    if ((counters = XSyncListSystemCounters(dpy, &ncounter)) != NULL)
-    {
-	for (int i = 0; i < ncounter; i++)
-	{
-	    // fprintf(stderr, "%s\n", counters[i].name);
-	    if (strcmp(counters[i].name, "SERVERTIME") == 0)
-	    {
-		servertime = counters[i].counter;
-		break;
-	    }
-	}
-	XSyncFreeSystemCounterList(counters);
-    }
-    if (servertime == None)
-    {
-	fprintf(stderr, "SERVERTIME counter not found");
-	return 1;
-    }
-    XSyncAlarmAttributes al_attr;
-    long unsigned int flags = 0;
-    al_attr.trigger.counter = servertime;
-    flags |= XSyncCACounter;
-#ifdef DEBUG
-    XSyncIntToValue(&al_attr.trigger.wait_value, 100);
-#else
-	XSyncIntToValue(&al_attr.trigger.wait_value, 1000);
-#endif
-    flags |= XSyncCAValue;
-    al_attr.trigger.value_type = XSyncRelative;
-    flags |= XSyncCAValueType;
-    al_attr.trigger.test_type = XSyncPositiveComparison;
-    flags |= XSyncCATestType;
-/* set the delta to 0, this will deactivate the alarm after firing once. */
-    XSyncIntToValue(&al_attr.delta, 0);
-    flags |= XSyncCADelta;
-
-    XSyncAlarm alarm = XSyncCreateAlarm(dpy, flags, &al_attr);
-
-    /*
-     * end of alarm
-     */
-#else
+	
+	/* We generate the sync_event by setting an XAlarm */
 	int sync_event = sync_XAlarm(dpy);
-#endif
+
     /* generate Pixmap from xpm */
     Pixmap red_p, blue_p, black_p, white_p;
     Pixmap clipper, pattern;
@@ -491,13 +396,15 @@ https://nrk.neocities.org/articles/x11-timeout-with-xsyncalarm
 		return -1;
 		
 	/* make unresizable window */
+	make_unresizable_window(dpy, window);
+	/*
 	XSizeHints *size_hints = XAllocSizeHints();
 	size_hints->flags = PMinSize | PMaxSize;
 	size_hints->min_width = size_hints->max_width = watt.size_x;
 	size_hints->min_height = size_hints->max_height = watt.size_y;
 	XSetWMNormalHints(dpy, window, size_hints);
 	XFree(size_hints);
-	
+	*/
     /*
      * Main loop
      */
@@ -557,45 +464,16 @@ https://nrk.neocities.org/articles/x11-timeout-with-xsyncalarm
 	    if (event.type == (sync_event + XSyncAlarmNotify))
 	    {
 		/* got an alarm */
-		read_temperature(text_string);
-		float Celsius = (float)atof(text_string);
-		size_t index = 0;
-		const float tick = 80.0f / 127.0f;
-		float test = 19.9f;
-		while (test < Celsius) {
-		    index++;
-		    test += tick;
-		}
-		index = MIN(index, 127);
-
+		float Celsius = read_temperature(text_string);
+		size_t index = generate_index(text_string);
 		XSetForeground(dpy, gc, cms_screen[index].pixel);
-#if 0
-		struct ArcAttr arcatt;
-		arcatt.rad_x = 128;
-		arcatt.rad_y = 128;
-		arcatt.three = 64 * 90;
-		arcatt.length = 64 * 360;
-		XFillArc(dpy, window, gc, (watt.size_x - arcatt.rad_x) >> 1, 
-			(watt.size_y - arcatt.rad_y) >> 1,
-		    arcatt.rad_x, arcatt.rad_y, arcatt.three, arcatt.length);
-#else
 		XFillArcs(dpy, window, gc, &circle, 1);
-#endif
 		if (p != None){
-#if 1
-			XCopyArea(dpy, p, win, gc, 0, 0, (watt.size_x-64), 14, 0, 0);
-#else
-			XCopyArea(dpy, p, window, gc, 2, 0, (watt.size_x-64-2), 14,
-			33, (watt.size_y-48+1));
-#endif
+			XCopyArea(dpy, p, win, gc, 2, 0, p_att.w - 2, p_att.h, 0, 0);
 			}
 		
 		if (ticker == 0){
-#if 0
-			XCopyArea(dpy, black_p, window, gc, 0, 0, 2, 2, sub_x + 1, sub_y + 7);
-#else
-			XCopyArea(dpy, white_p, win, gc, 0, 0, 2, 2, 1, 7);
-#endif
+			XCopyArea(dpy, white_p, win, gc, 0, 0, 2, 2, 1, 17);
 			previous = Celsius;
 			ticker += 2;
 		}
@@ -604,21 +482,11 @@ https://nrk.neocities.org/articles/x11-timeout-with-xsyncalarm
 				up -= 2;
 				up = MAX(up, -6);
 				down = 0;
-#if 0
-				XCopyArea(dpy, red_p, window, gc, 0, 0, 2, 2, sub_x + 1 + ticker, 
-				sub_y + 7 + up);
-#else
-				XCopyArea(dpy, red_p, win, gc, 0, 0, 2, 2, 1+ticker, 7+ up);
-#endif
+				XCopyArea(dpy, red_p, win, gc, 0, 0, 2, 2, 1+ticker, 17+ up);
 				previous = Celsius;
 			}
 			else if (Celsius == previous) {
-#if 0
-				XCopyArea(dpy, black_p, window, gc, 0, 0, 2, 2, sub_x + 1 + ticker, 
-				sub_y + 7);
-#else
-				XCopyArea(dpy, white_p, win, gc, 0, 0, 2, 2, 1+ticker, 7);
-#endif
+				XCopyArea(dpy, white_p, win, gc, 0, 0, 2, 2, 1 + ticker, 17);
 				up = 0;
 				down = 0;
 				}
@@ -626,16 +494,11 @@ https://nrk.neocities.org/articles/x11-timeout-with-xsyncalarm
 				down += 2;
 				down = MIN(down, 6);
 				up = 0;
-#if 0
-				XCopyArea(dpy, blue_p, window, gc, 0, 0, 2, 2, sub_x + 1 + ticker, 
-				sub_y + 7 + down);
-#else
-				XCopyArea(dpy, blue_p, win, gc, 0, 0, 2, 2, 1+ticker, 7+ down);
-#endif
+				XCopyArea(dpy, blue_p, win, gc, 0, 0, 2, 2, 1 + ticker, 17 + down);
 				previous = Celsius;
 				}
 			}
-
+#if 0
 			ticker += 2;
 			if (ticker >= (watt.size_x - 64 - 2)){
 				ticker -= 2;
@@ -660,6 +523,32 @@ https://nrk.neocities.org/articles/x11-timeout-with-xsyncalarm
 				XCopyArea(dpy, window, p, gc, (32+1), (watt.size_y-48+1), 
 				(watt.size_x-64-2), 14, 0, 0);
 			}
+#else
+			ticker += 2;
+			if (ticker >= (sub_w.size_x - 2)){
+				ticker -= 2;
+				if (p == None){
+					p_att.w = sub_w.size_x;
+					p_att.h = sub_w.size_y;
+					p_att.depth = DefaultDepth(dpy, defaultScreen);
+					p_att.root = win;
+					/* Pixmap XCreatePixmap(Display *display, Drawable d, 
+					 * 	unsigned int width, unsigned int height, 
+					 * 	unsigned int depth); */
+					/*
+					p = XCreatePixmap(dpy, parent, (watt.size_x-64), 14,
+					DefaultDepth(dpy, defaultScreen)); */
+					p = XCreatePixmap(dpy, p_att.root, p_att.w, p_att.h, p_att.depth);
+					if (p != None) {
+						XSetForeground(dpy, gc, WhitePixel(dpy, defaultScreen));
+						XFillRectangle(dpy, p, gc, 0, 0, (watt.size_x-64), 14);
+						XSetForeground(dpy, gc, BlackPixel(dpy, defaultScreen));
+					}
+				}
+				XCopyArea(dpy, win, p, gc, 0, 0, 
+				p_att.w, p_att.h, 0, 0);
+			}
+#endif
 		/*
 		 * find the width, in pixels, of the text that will be drawn using
 		 * the given font.
@@ -679,11 +568,7 @@ https://nrk.neocities.org/articles/x11-timeout-with-xsyncalarm
 #endif
 	    break;
 	}                               /* End XNextEvent switch */
-#if 0	/* restart alarm */
-	XSyncChangeAlarm(dpy, alarm, flags, &al_attr);
-#else
 	reload_XAlarm(dpy);
-#endif
     } /* End of Loop */
     
 cleanup: 
@@ -699,11 +584,8 @@ cleanup:
 		XFreePixmap(dpy, p);
     /* the rest*/
     XSync(dpy, True);
-    #if 0
-    XSyncDestroyAlarm(dpy, alarm);
-    #else
     destroy_XAlarm(dpy);
-    #endif
+
     XUnmapWindow(dpy, win);
     XUnmapWindow(dpy, window);
     XDestroyWindow(dpy, win);

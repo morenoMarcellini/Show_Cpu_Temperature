@@ -16,6 +16,7 @@ set(HEADER_FILES
 	read_temperature.h
 	get_host_name.h
 	sync_XAlarm.h
+	utilities.h
 )
 
 set(COMMON_SOURCE
@@ -23,6 +24,8 @@ set(COMMON_SOURCE
 	${CMAKE_SOURCE_DIR}/read_temperature.c
 	${CMAKE_SOURCE_DIR}/get_host_name.c
 	${CMAKE_SOURCE_DIR}/sync_XAlarm.c
+	${CMAKE_SOURCE_DIR}/utilities.c
+	${CMAKE_SOURCE_DIR}/xpm_definition.c
 )
 
 set(PROJECT_CONFIG_DIR ${CMAKE_SOURCE_DIR})
