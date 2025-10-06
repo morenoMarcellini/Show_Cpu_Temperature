@@ -12,7 +12,7 @@ Pixmap red_p, blue_p, black_p, white_p, rainbow_p;
 Pixmap clipper, pattern;
 XImage *xi_clipper, *xi_pattern;
 XpmAttributes xpm_a;
-static Status init = -1;
+static Status init = !XpmSuccess;
 
 Status xpm_init()
 {
@@ -24,6 +24,7 @@ Status xpm_init()
     xpm_a.valuemask |= XpmReturnExtensions;
     xpm_a.valuemask |= XpmReturnAllocPixels;
 
+	init = XpmSuccess;
     return XpmSuccess;
 }
 
@@ -31,9 +32,11 @@ Pixmap create_rainbow_pixmap(Display *dpy, Drawable parent)
 {
     if (init != XpmSuccess)
 	xpm_init();
-    Status stat = XpmCreatePixmapFromData(dpy, parent, rainbow, &pattern, &clipper, &xpm_a);
+    Status stat = XpmCreatePixmapFromData(dpy, parent, rainbow, &pattern, 
+    &clipper, &xpm_a);
 
-    if (stat == Success)
+	fprintf(stderr,"%d %d\n", init, stat); 
+    if (stat == XpmSuccess)
     {
 	return pattern;
     }
@@ -50,7 +53,7 @@ XImage *create_rainbow_ximage(Display *dpy)
 	xpm_init();
     Status stat = XpmCreateImageFromData(dpy, rainbow, &xi_pattern, &xi_clipper, &xpm_a);
 
-    if (stat == Success)
+    if (stat == XpmSuccess)
     {
 	return xi_pattern;
     }

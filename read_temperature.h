@@ -1,6 +1,6 @@
 #ifndef READTEMPERATURE
 #define READTEMPERATURE
 
-int read_temperature(char*);
+float read_temperature(char*);
 
 #endif

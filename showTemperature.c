@@ -35,16 +35,21 @@ int main(int argc, char **argv)
     XSetWindowAttributes wset;
     /* XWindowAttributes are readable attributes */
     // XWindowAttributes win_a;
-    
     XEvent event;
     Atom wmDeleteMessage;
     GC gc;
-    int parent;	// the root window;
+    int parent;                         // the root window;
     int defaultScreen;
     Pixmap p = None;
     XPixmapAttributes p_att;
 
-    /*
+    size_t ticker = 0;
+    float previous = 0.0f;
+    int up = 0, down = 0;
+
+    /* easy way to get hostname */
+    char hostname[1024];
+	/*
      * Other stuff
      * window dimensions
      */
@@ -55,14 +60,8 @@ int main(int argc, char **argv)
     watt.size_x = 256;
     watt.size_y = watt.size_x;
     watt.border_size = 2;
-	
-	
-	size_t ticker = 0;
-	float previous = 0.0f;
-	int up = 0, down = 0;
-	
-    /* easy way to get hostname */
-    char hostname[1024];
+    
+    /* let us go*/
     get_host_name_IP4(hostname);
     printf("%s\n", hostname);
     /* we try with XThreads */
@@ -100,40 +99,35 @@ int main(int argc, char **argv)
 	fprintf(stderr, "no such visual\n");
 	return 1;
     }
-    printf("Matched visual 0x%lx class %d (%s) depth %d\n", visInfo.visualid,
-		visInfo.class, (visInfo.class == TrueColor ? "TrueColor" : "unknown"), 
-		visInfo.depth);
+    printf("Matched visual 0x%lx class %d (%s) depth %d\n", visInfo.visualid, visInfo.class, (visInfo.class ==
+	TrueColor ? "TrueColor" : "unknown"), visInfo.depth);
 
     XSync(dpy, True);                   // clear out the event queue
 
-	/* After connect to display, got root, screen, and visual, we can define 
-	 * the main window */
+    /* After connect to display, got root, screen, and visual, we can define
+     * the main window */
 
-	/* Define few attributes */
-	wset.bit_gravity = StaticGravity; //ForgetGravity;
-	wset.win_gravity = NorthWestGravity;
-	wset.backing_store = WhenMapped;
-	wset.background_pixel = WhitePixel(dpy, defaultScreen);
-	wset.border_pixel = BlackPixel(dpy, defaultScreen);
-	wset.event_mask = ExposureMask;
-	wset.save_under = True;
-	
-	unsigned int w_mask;
-	w_mask = CWBackPixel;
-	w_mask |= CWBorderPixel;
-	w_mask |= CWEventMask;
-	w_mask |= CWSaveUnder;
-	w_mask |= CWBackingStore;
-	w_mask |= CWBitGravity;
-	w_mask |= CWWinGravity;
+    /* Define few attributes */
+    wset.bit_gravity = StaticGravity;   // ForgetGravity;
+    wset.win_gravity = NorthWestGravity;
+    wset.backing_store = WhenMapped;
+    wset.background_pixel = WhitePixel(dpy, defaultScreen);
+    wset.border_pixel = BlackPixel(dpy, defaultScreen);
+    wset.event_mask = ExposureMask;
+    wset.save_under = True;
 
-	window = XCreateWindow(dpy, parent, 
-	watt.pos_x, watt.pos_y, watt.size_x, watt.size_y, watt.border_size, 
-	DefaultDepth(dpy, defaultScreen),
-	InputOutput,
-	DefaultVisual(dpy, defaultScreen), 
-	w_mask, &wset);
+    unsigned int w_mask;
 
+    w_mask = CWBackPixel;
+    w_mask |= CWBorderPixel;
+    w_mask |= CWEventMask;
+    w_mask |= CWSaveUnder;
+    w_mask |= CWBackingStore;
+    w_mask |= CWBitGravity;
+    w_mask |= CWWinGravity;
+
+    window = XCreateWindow(dpy, parent, watt.pos_x, watt.pos_y, watt.size_x, watt.size_y, watt.border_size,
+	DefaultDepth(dpy, defaultScreen), InputOutput, DefaultVisual(dpy, defaultScreen), w_mask, &wset);
     if (!window)
     {
 	fprintf(stderr, "Failed to create simple window\n");
@@ -172,25 +166,8 @@ int main(int argc, char **argv)
     XSetForeground(dpy, gc, BlackPixel(dpy, defaultScreen));
 
     /* set the window name, app name, and class */
-#if 1
-	set_window_name(dpy, window);
-#else    
-    char *appname = "Cpu(s) Temperature(s)";
-    XClassHint *classHint;
+    set_window_name(dpy, window);
 
-    /* set the titlebar name */
-    XStoreName(dpy, window, appname);
-
-    /* set the name and class hints for the window manager to use */
-    classHint = XAllocClassHint();
-    if (classHint)
-    {
-	classHint->res_name = appname;
-	classHint->res_class = "CpuTemperature";
-    }
-    XSetClassHint(dpy, window, classHint);
-    XFree(classHint);
-#endif
     /* Example for Colours */
     Colormap cmap = DefaultColormap(dpy, 0);
 
@@ -205,9 +182,7 @@ int main(int argc, char **argv)
     cms_screen = (XcmsColor *)malloc(128 * sizeof (XcmsColor));
     for (size_t i = 0, j = 0; i < 256; i += 2, j++)
     {
-	Status status = XcmsLookupColor(dpy, cmap, jetColor[i], &cms_exact, 
-		&cms_screen[j], XcmsRGBiFormat);
-
+	Status status = XcmsLookupColor(dpy, cmap, jetColor[i], &cms_exact, &cms_screen[j], XcmsRGBiFormat);
 	if (status == XcmsFailure)
 	{
 	    fprintf(stderr, "Failure in XcmsLookupColor: %ld\n", i);
@@ -276,16 +251,16 @@ int main(int argc, char **argv)
 	if (e.type == MapNotify)
 	    break;
     }
-    
-	/* Simpler way */
-	XArc circle;
+
+    /* Simpler way */
+    XArc circle;
     circle.width = circle.height = 128;
     circle.angle1 = 64 * 90;
-    circle.angle2 = 64 *360;
+    circle.angle2 = 64 * 360;
     circle.x = (watt.size_x - circle.width) >> 1;
     circle.y = (watt.size_y - circle.height) >> 1;
 
-	XDrawArcs(dpy, window, gc, &circle, 1);
+    XDrawArcs(dpy, window, gc, &circle, 1);
 
     // Flush the drawing commands
     XFlush(dpy);
@@ -318,8 +293,9 @@ int main(int argc, char **argv)
     y = font_height;
     XDrawString(dpy, window, gc, x, y, hostname, strlen(hostname));
 
-    read_temperature(text_string);
-
+	/* read the initial temperature */
+	previous = read_temperature(text_string);
+	printf("<%f> ", previous);
     /*
      * find the width, in pixels, of the text that will be drawn using
      * the given font.
@@ -327,84 +303,100 @@ int main(int argc, char **argv)
     string_width = XTextWidth(font_info, text_string, strlen(text_string));
     x = (watt.size_x - string_width) >> 1;
     y = ((watt.size_y + font_height) >> 1) - 8;
-    
-    /* Add rectangle to draw the relative variation of temperature */
-    /* change to subwindow */
 
-	/* we recycle the original XSetWindowAttributes */
-	WindowTopology sub_w;
-	sub_w.pos_x = 32;
-	sub_w.pos_y = (watt.size_y - 48);
-	sub_w.size_x = watt.size_x - 64;
-	sub_w.size_y = 33;
-	sub_w.border_size = 1;
-	wset.background_pixel = BlackPixel(dpy, defaultScreen);
-	
-	win = XCreateWindow(dpy, window,
-		sub_w.pos_x, sub_w.pos_y, sub_w.size_x, sub_w.size_y, sub_w.border_size,
-		DefaultDepth(dpy, defaultScreen),
-		InputOutput,
-		DefaultVisual(dpy, defaultScreen),
-		w_mask, &wset);
-	if (win != 0) XMapWindow(dpy, win);
-		else 
+    /*
+     * Add rectangle to draw the relative variation of temperature
+     * change to subwindow
+     */
+
+    /* we recycle the original XSetWindowAttributes */
+    WindowTopology sub_w;
+    sub_w.pos_x = 32;
+    sub_w.pos_y = (watt.size_y - 48);
+    sub_w.size_x = watt.size_x - 64;
+    sub_w.size_y = 33;
+    sub_w.border_size = 1;
+    wset.background_pixel = BlackPixel(dpy, defaultScreen);
+
+    win = XCreateWindow(dpy, window, sub_w.pos_x, sub_w.pos_y, sub_w.size_x, sub_w.size_y, sub_w.border_size,
+	DefaultDepth(dpy, defaultScreen), InputOutput, DefaultVisual(dpy, defaultScreen), w_mask, &wset);
+    if (win != 0)
+		XMapWindow(dpy, win);
+    else
+	{
+		fprintf(stderr, "I cannot create the subwindow; exit\n");
 		return -1;
-		
+	}
     /* we change the gc.foreground */
     XGCValues xgc;
     xgc.foreground = cms_exact.pixel;
     XChangeGC(dpy, gc, GCForeground, &xgc);
-	XFillArcs(dpy, window, gc, &circle, 1);
+    XFillArcs(dpy, window, gc, &circle, 1);
 
     /* back to black pencil */
     xgc.foreground = BlackPixel(dpy, defaultScreen);
     XChangeGC(dpy, gc, GCForeground, &xgc);
     XDrawString(dpy, window, gc, x, y, text_string, strlen(text_string));
-	
-	/* We generate the sync_event by setting an XAlarm */
-	int sync_event = sync_XAlarm(dpy);
 
+    /* We generate the sync_event by setting an XAlarm */
+    int sync_event = sync_XAlarm(dpy);
+#if 0
     /* generate Pixmap from xpm */
     Pixmap red_p, blue_p, black_p, white_p;
-    Pixmap clipper, pattern;
+    Pixmap clipper, rainbow;
     XpmAttributes xpm_a;
     Status stat;
-    
+
     xpm_a.color_key = XPM_COLOR;
-    
+
     xpm_a.valuemask = XpmColorKey | XpmColorTable | XpmReturnPixels | XpmReturnExtensions;
-	xpm_a.valuemask |= XpmReturnAllocPixels;
-	
+    xpm_a.valuemask |= XpmReturnAllocPixels;
+
     stat = XpmCreatePixmapFromData(dpy, parent, red_dot, &red_p, &clipper, &xpm_a);
     printf("%s\n", XpmGetErrorString(stat));
     if (stat < 0)
-		return -1;
-	
+	return -1;
     stat = XpmCreatePixmapFromData(dpy, parent, blue_dot, &blue_p, &clipper, &xpm_a);
     printf("%s\n", XpmGetErrorString(stat));
     if (stat < 0)
-		return -1;
-	
+	return -1;
     stat = XpmCreatePixmapFromData(dpy, parent, black_dot, &black_p, &clipper, &xpm_a);
     printf("%s\n", XpmGetErrorString(stat));
     if (stat < 0)
-		return -1;
-	
-	stat = XpmCreatePixmapFromData(dpy, parent, white_dot, &white_p, &clipper, &xpm_a);
+	return -1;
+    stat = XpmCreatePixmapFromData(dpy, parent, white_dot, &white_p, &clipper, &xpm_a);
     printf("%s\n", XpmGetErrorString(stat));
     if (stat < 0)
-		return -1;
-		
-	/* make unresizable window */
-	make_unresizable_window(dpy, window);
-	/*
-	XSizeHints *size_hints = XAllocSizeHints();
-	size_hints->flags = PMinSize | PMaxSize;
-	size_hints->min_width = size_hints->max_width = watt.size_x;
-	size_hints->min_height = size_hints->max_height = watt.size_y;
-	XSetWMNormalHints(dpy, window, size_hints);
-	XFree(size_hints);
-	*/
+	return -1;
+#else
+	/* create a set of pixel in 8 colors */
+    Pixmap rainbow = create_rainbow_pixmap(dpy, win);
+#endif
+    /* create pixmap for background of sub window */
+    if (p == None)
+    {
+	p_att.w = sub_w.size_x;
+	p_att.h = sub_w.size_y;
+	p_att.depth = DefaultDepth(dpy, defaultScreen);
+	p_att.root = win;
+
+	/* Pixmap XCreatePixmap(Display *display, Drawable d,
+	 * 	unsigned int width, unsigned int height,
+	 * 	unsigned int depth); */
+	
+	p = XCreatePixmap(dpy, p_att.root, p_att.w, p_att.h, p_att.depth);
+	if (p != None)
+		XCopyArea(dpy, win, p, gc, 0, 0, sub_w.size_x, sub_w.size_y, 0, 0);
+	else {
+		fprintf(stderr, "Cannot create pixmap p\n");
+		exit(-1);
+		}
+    }
+    /* make unresizable window */
+    make_unresizable_window(dpy, window);
+	/* copy first white dot */
+    XCopyArea(dpy, rainbow, win, gc, XPM_WHITE, 0, 1, 1, 0, 17);
+    ticker += 1;
     /*
      * Main loop
      */
@@ -468,87 +460,50 @@ int main(int argc, char **argv)
 		size_t index = generate_index(text_string);
 		XSetForeground(dpy, gc, cms_screen[index].pixel);
 		XFillArcs(dpy, window, gc, &circle, 1);
-		if (p != None){
-			XCopyArea(dpy, p, win, gc, 2, 0, p_att.w - 2, p_att.h, 0, 0);
-			}
-		
-		if (ticker == 0){
-			XCopyArea(dpy, white_p, win, gc, 0, 0, 2, 2, 1, 17);
-			previous = Celsius;
-			ticker += 2;
-		}
-		else {
-			if (Celsius > previous){
-				up -= 2;
-				up = MAX(up, -6);
-				down = 0;
-				XCopyArea(dpy, red_p, win, gc, 0, 0, 2, 2, 1+ticker, 17+ up);
-				previous = Celsius;
-			}
-			else if (Celsius == previous) {
-				XCopyArea(dpy, white_p, win, gc, 0, 0, 2, 2, 1 + ticker, 17);
-				up = 0;
-				down = 0;
-				}
-			else {
-				down += 2;
-				down = MIN(down, 6);
-				up = 0;
-				XCopyArea(dpy, blue_p, win, gc, 0, 0, 2, 2, 1 + ticker, 17 + down);
-				previous = Celsius;
-				}
-			}
 #if 0
-			ticker += 2;
-			if (ticker >= (watt.size_x - 64 - 2)){
-				ticker -= 2;
-				if (p == None){
-					p_att.w = sub_w.size_x;
-					p_att.h = sub_w.size_y;
-					p_att.depth = DefaultDepth(dpy, defaultScreen);
-					p_att.root = win;
-					/* Pixmap XCreatePixmap(Display *display, Drawable d, 
-					 * 	unsigned int width, unsigned int height, 
-					 * 	unsigned int depth); */
-					/*
-					p = XCreatePixmap(dpy, parent, (watt.size_x-64), 14,
-					DefaultDepth(dpy, defaultScreen)); */
-					p = XCreatePixmap(dpy, p_att.root, p_att.w, p_att.h, p_att.depth);
-					if (p != None) {
-						XSetForeground(dpy, gc, WhitePixel(dpy, defaultScreen));
-						XFillRectangle(dpy, p, gc, 0, 0, (watt.size_x-64), 14);
-						XSetForeground(dpy, gc, BlackPixel(dpy, defaultScreen));
-					}
-				}
-				XCopyArea(dpy, window, p, gc, (32+1), (watt.size_y-48+1), 
-				(watt.size_x-64-2), 14, 0, 0);
-			}
-#else
-			ticker += 2;
-			if (ticker >= (sub_w.size_x - 2)){
-				ticker -= 2;
-				if (p == None){
-					p_att.w = sub_w.size_x;
-					p_att.h = sub_w.size_y;
-					p_att.depth = DefaultDepth(dpy, defaultScreen);
-					p_att.root = win;
-					/* Pixmap XCreatePixmap(Display *display, Drawable d, 
-					 * 	unsigned int width, unsigned int height, 
-					 * 	unsigned int depth); */
-					/*
-					p = XCreatePixmap(dpy, parent, (watt.size_x-64), 14,
-					DefaultDepth(dpy, defaultScreen)); */
-					p = XCreatePixmap(dpy, p_att.root, p_att.w, p_att.h, p_att.depth);
-					if (p != None) {
-						XSetForeground(dpy, gc, WhitePixel(dpy, defaultScreen));
-						XFillRectangle(dpy, p, gc, 0, 0, (watt.size_x-64), 14);
-						XSetForeground(dpy, gc, BlackPixel(dpy, defaultScreen));
-					}
-				}
-				XCopyArea(dpy, win, p, gc, 0, 0, 
-				p_att.w, p_att.h, 0, 0);
-			}
+		if (p != None)
+		    XCopyArea(dpy, p, win, gc, 2, 0, p_att.w - 2, p_att.h, 0, 0);
+		if (ticker == 0)
+		{
+		    XCopyArea(dpy, white_p, win, gc, 0, 0, 2, 2, 1, 17);
+		    previous = Celsius;
+		    ticker += 2;
+		}
+		else
 #endif
+		{
+		    if (Celsius > previous)
+		    {
+			up -= 1;
+			up = MAX(up, -16);
+			down = 0;
+			XCopyArea(dpy, rainbow, win, gc, XPM_RED, 0, 1, 1, 1 + ticker, 17 + up);
+			previous = Celsius;
+		    }
+		    else
+		    if (Celsius == previous)
+		    {
+			XCopyArea(dpy, rainbow, win, gc, XPM_WHITE, 0, 1, 1, 1 + ticker, 17);
+			up = 0;
+			down = 0;
+		    }
+		    else
+		    {
+			down += 1;
+			down = MIN(down, 16);
+			up = 0;
+			XCopyArea(dpy, rainbow, win, gc, XPM_BLUE, 0, 1, 1, 1 + ticker, 17 + down);
+			previous = Celsius;
+		    }
+		}
+
+		ticker += 1;
+		if (ticker > (sub_w.size_x - 1))
+		{
+		    ticker -= 1;
+		    XCopyArea(dpy, win, win, gc, 1, 0, p_att.w, p_att.h, 0, 0);
+		}
+
 		/*
 		 * find the width, in pixels, of the text that will be drawn using
 		 * the given font.
@@ -570,18 +525,19 @@ int main(int argc, char **argv)
 	}                               /* End XNextEvent switch */
 	reload_XAlarm(dpy);
     } /* End of Loop */
-    
-cleanup: 
+
+cleanup:
     // Clean up
     /* all the Pixmap stored in XServer */
+#if 0
     XFreePixmap(dpy, red_p);
     XFreePixmap(dpy, black_p);
     XFreePixmap(dpy, blue_p);
     XFreePixmap(dpy, white_p);
-    //XFreePixmap(dpy, clipper);
-    //XFreePixmap(dpy, pattern);
-    if (p!=None)
-		XFreePixmap(dpy, p);
+#endif
+    XFreePixmap(dpy, rainbow);
+    if (p != None)
+	XFreePixmap(dpy, p);
     /* the rest*/
     XSync(dpy, True);
     destroy_XAlarm(dpy);

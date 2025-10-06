@@ -12,18 +12,18 @@
 #define XPM_YELLOW	6
 #define XPM_MAGENTA	7
 
+/* XPM */
 static char * rainbow[] = {
-    "8 1 8 1",  /* Width 2, Height 2, 1 colors, 1 char/pixel */
+    "8 1 8 1",  /* Width 8, Height 1, 8 colors, 1 char/pixel */
     "a c #000000", /* 'a' represents a black pixel */
     "b c #FFFFFF", /* 'b' represents a black pixel */
     "c c #FF0000", /* 'c' represents a red pixel */
-    "f c #00FF00", /* 'd' represents a green pixel */
-    "e c #0000FF", /* 'e' represents a blue pixel */
+    "d c #00FF00", /* 'd' represents a green pixel */
+    "e c #00FF00", /* 'd' represents a blue pixel */
     "f c #00FFFF", /* 'f' represents a cyan pixel */
     "g c #FF00FF", /* 'g' represents a yellow pixel */
     "h c #FFFF00", /* 'h' represents a magenta pixel */
-    "bb",  /* First row: all white */
-    "bb"  /* Second row: white, black, black, white */
+    "abcdefgh" 	   /* First row: all white */
 };
 
 

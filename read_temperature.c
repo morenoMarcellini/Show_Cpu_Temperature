@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <sys/param.h>
 
-int read_temperature(char *text_string)
+float read_temperature(char *text_string)
 {
     FILE *fi;
 
@@ -22,8 +22,10 @@ int read_temperature(char *text_string)
 
     snprintf(text_string, 5, "%.1f", MIN(temperature, 99.9));
     fclose(fi);
-    return 0;
+
+    return temperature;
 }
+
 #if 0
 int read_temperature(char *text_string, float *celsius)
 {
