@@ -1,5 +1,4 @@
 # Show_Cpu_Temperature
-[ Need to upload code: work in progress ]
 
 Example of code using Xlib and a few of XExtension.
 
