@@ -19,7 +19,7 @@ static char * rainbow[] = {
     "b c #FFFFFF", /* 'b' represents a black pixel */
     "c c #FF0000", /* 'c' represents a red pixel */
     "d c #00FF00", /* 'd' represents a green pixel */
-    "e c #00FF00", /* 'd' represents a blue pixel */
+    "e c #0000FF", /* 'd' represents a blue pixel */
     "f c #00FFFF", /* 'f' represents a cyan pixel */
     "g c #FF00FF", /* 'g' represents a yellow pixel */
     "h c #FFFF00", /* 'h' represents a magenta pixel */

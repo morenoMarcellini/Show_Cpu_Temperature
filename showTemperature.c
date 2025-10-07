@@ -498,10 +498,11 @@ int main(int argc, char **argv)
 		}
 
 		ticker += 1;
-		if (ticker > (sub_w.size_x - 1))
+		if (ticker >= (sub_w.size_x - 1))
 		{
 		    ticker -= 1;
-		    XCopyArea(dpy, win, win, gc, 1, 0, p_att.w, p_att.h, 0, 0);
+		    XCopyArea(dpy, win, p, gc, 1, 0, p_att.w, p_att.h, 0, 0);
+		    XCopyArea(dpy, p, win, gc, 0, 0, p_att.w, p_att.h, 0, 0);
 		}
 
 		/*
